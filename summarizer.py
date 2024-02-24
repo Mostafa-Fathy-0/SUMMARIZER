@@ -1,55 +1,53 @@
 import streamlit as st
-import re
-from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
+import newspaper
+import nltk
 
-# Function to handle whitespace and newline characters
-def clean_text(text):
-    return re.sub(r'\s+', ' ', re.sub(r'\n+', ' ', text.strip()))
+nltk.download('punkt')
 
-# Main function to generate the summary
-def generate_summary(article_text, model_name, max_summary_length=84, num_beams=4):
-    # Clean the input text
-    cleaned_text = clean_text(article_text)
+#st.markdown('<style> .css-1v0mbdj {margin:0 auto; width:50%; </style>', unsafe_allow_html=True)
 
-    # Load tokenizer and model
-    tokenizer = AutoTokenizer.from_pretrained(model_name)
-    model = AutoModelForSeq2SeqLM.from_pretrained(model_name)
 
-    # Tokenize the cleaned text
-    input_ids = tokenizer(
-        [cleaned_text],
-        return_tensors="pt",
-        padding="max_length",
-        truncation=True,
-        max_length=512
-    )["input_ids"]
+st.title('التلخيص التلقائي للنصوص')
 
-    # Generate the summary
-    output_ids = model.generate(
-        input_ids=input_ids,
-        max_length=max_summary_length,
-        no_repeat_ngram_size=2,
-        num_beams=num_beams
-    )[0]
+url = st.text_input('', placeholder='الرجاء ادخارابط النص المراد تلخيصه')
 
-    # Decode the summary tokens into text
-    summary = tokenizer.decode(
-        output_ids,
-        skip_special_tokens=True,
-        clean_up_tokenization_spaces=False
-    )
+if url:
+    try:
+        article = newspaper.Article(url)
 
-    return summary
+        article.download()
+        # article.html
+        article.parse()
 
-def main():
-    st.title('Text Summarizer')
-    st.write('Enter the article text below:')
-    article_text = st.text_area('Input Article Text', height=300)
-    if st.button('Generate Summary'):
-        model_name = "csebuetnlp/mT5_multilingual_XLSum"
-        summary = generate_summary(article_text, model_name)
-        st.subheader('Summary:')
-        st.write(summary)
+        img = article.top_image
+        st.image(img)
+        
 
-if __name__ == "__main__":
-    main()
+        title = article.title
+        st.subheader(title)
+        
+
+        authors = article.authors
+        st.text(','.join(authors))
+        
+        article.nlp()
+
+        keywords = article.keywords
+        st.subheader('الكلمات المفتاحية:')
+        st.write(', '.join(keywords))
+        
+        tab1, tab2= st.tabs(["النص الاصلي", "الملخص"])
+        with tab1:
+            txt = article.text
+            txt = txt.replace('Advertisement', '')
+            st.write(txt)
+        
+        with tab2:
+            st.subheader('المخص')
+            summary = article.summary
+            summary = summary.replace('Advertisement', '')
+            st.write(summary)
+        
+        
+    except:
+        st.error('عذرا حدث خطاء ما')
