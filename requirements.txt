@@ -2,3 +2,5 @@ sentencepiece
 transformers
 streamlit
 torch
+nltk
+newspaper3k
